@@ -1,0 +1,94 @@
+---
+title: "NBA Tweetbot"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+devtools::install_github("abresler/nbastatR")
+
+library("nbastatR")
+library(tidyverse)
+```
+
+# Game of the Day
+
+## Things to add
+
+### R Script
+[ ] Network and time for national games
+[ ] Language for ties
+
+### Twitter
+[ ] Create twitter account
+[ ] Tweet out the message
+[ ] Create a thread
+[ ] Create icon and add description text
+
+### Automate
+[ ] Move to cloud
+[ ] Schedule to run daily
+
+### Future Enhancements
+[ ] Previous meeting  
+  [ ] If a blow out, regular or close win, change language  
+
+
+## R Script
+
+```{r}
+
+#Tweet Language
+category <- c("Best", "National", "Worst")
+
+messaging <- c("Interested in the best game today? Watch the",
+               "Interested in the best game on national TV today? Watch the",
+               "Glutton for punishment? Super into the lottery? Watch the")
+
+message_data <- data.frame(category, messaging)
+
+days_scores(game_dates = "2021-01-06", include_standings = T, league = "NBA")
+
+standings <-
+  rbind(dataScoreEastConfStandingsByDayNBA, dataScoreWestConfStandingsByDayNBA)
+
+team_data <- 
+  dataScoreLineScoreNBA %>% 
+    left_join(select(standings, idTeam, pctWins)) %>% 
+    select(-c(teamName, cityTeam, idGame, numberGameDate, slugTeam, dateGame))
+
+game_select_data <- 
+  dataScoreGameHeaderNBA %>% 
+    select(c(dateGame, idGame, idTeamHome, idTeamAway, slugTVBroadcaster, )) %>% 
+  rename(home = idTeamHome,
+         away = idTeamAway) %>% 
+  pivot_longer(cols = c(home,away), names_to = "home_away", values_to = "idTeam") %>% 
+  left_join(team_data) %>% 
+  pivot_wider(names_from = home_away, values_from = c(idTeam, nameTeam, recordOverall, pctWins)) %>% 
+      mutate(combo_win_pct = pctWins_home + pctWins_away) %>% 
+    arrange(desc(combo_win_pct)) %>% 
+  mutate(gameURL = paste0('https://www.nba.com/game/00', idGame),
+         category = 
+           case_when(
+             combo_win_pct == max(combo_win_pct) ~ "Best",
+             !is.na(slugTVBroadcaster) | combo_win_pct == max(combo_win_pct) ~ 'National',
+             combo_win_pct == min(combo_win_pct) ~ "Worst")) %>% 
+  filter(!is.na(category)) %>% 
+  left_join(message_data)
+
+paste(game_select_data$messaging, 
+      game_select_data$recordOverall_home, 
+      game_select_data$nameTeam_home, 
+      "take on the", 
+      game_select_data$recordOverall_away, 
+      game_select_data$nameTeam_away,
+      "-", 
+      game_select_data$gameURL)
+
+```
+
+## Write the tweet
+
+
+
