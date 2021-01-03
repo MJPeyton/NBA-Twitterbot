@@ -37,6 +37,8 @@ library(tidyverse)
 
 ## R Script
 
+http://asbcllc.com/nbastatR/reference/days_scores.html
+
 ```{r}
 
 #Tweet Language
